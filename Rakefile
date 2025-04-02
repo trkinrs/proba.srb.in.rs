@@ -21,8 +21,6 @@ end
 desc "Deploy _site to gh-pages branch"
 task :deploy do
   # Save current branch
-  current_branch = `git branch --show-current`.strip
-  fail "current_branch is empty" if current_branch.empty?
   origin = `git config --get remote.origin.url`
   fail "origin is empty" if origin.empty?
   # Build the site
@@ -46,11 +44,6 @@ task :deploy do
     puts "Pushing to #{origin}"
     sh "git push --force origin #{DEPLOY_BRANCH}"
   end
-
-  sh "git push #{REMOTE} #{DEPLOY_BRANCH}"
-
-  # Return to previous branch
-  sh "git checkout #{current_branch}"
 end
 
 desc "Full deploy: commit source and publish site"
