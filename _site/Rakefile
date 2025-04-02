@@ -22,9 +22,7 @@ desc "Deploy _site to gh-pages branch"
 task :deploy do
   # Save current branch
   current_branch = `git branch --show-current`.strip
-  fail "current_branch is blank" if current_branch.blank?
-  origin = `git config --get remote.origin.url`
-  fail "origin is blank" if origin.blank?
+  origin = `git config --get remote.github.url`
   # Build the site
   Rake::Task[:build].invoke
 
@@ -54,4 +52,4 @@ task :deploy do
 end
 
 desc "Full deploy: commit source and publish site"
-task :default => [:commit_source, :deploy]
+task :full_deploy => [:commit_source, :deploy]
