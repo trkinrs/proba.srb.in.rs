@@ -1,10 +1,10 @@
 require 'rake'
 require 'fileutils'
+require "tmpdir"
 
 SOURCE_BRANCH = "main"
 DEPLOY_BRANCH = "gh-pages"
 BUILD_DIR = "_site"
-REMOTE = "origin"
 
 desc "Build the site with Jekyll"
 task :build do
@@ -15,28 +15,36 @@ desc "Commit source code to main"
 task :commit_source do
   sh "git add ."
   sh %(git commit -m "Update source site content" || echo 'Nothing to commit on main')
-  sh "git push #{REMOTE} #{SOURCE_BRANCH}"
+  sh "git push origin #{SOURCE_BRANCH}"
 end
 
 desc "Deploy _site to gh-pages branch"
 task :deploy do
   # Save current branch
   current_branch = `git branch --show-current`.strip
-
+  origin = `git config --get remote.github.url`
   # Build the site
   Rake::Task[:build].invoke
 
-  # Checkout deploy branch
-  sh "git checkout #{DEPLOY_BRANCH} 2>/dev/null || git checkout --orphan #{DEPLOY_BRANCH}"
-  sh "git reset --hard"
+  Dir.mktmpdir do |tmp|
+    # Copy accross our compiled _site directory.
+    cp_r "_site/.", tmp
 
-  # Copy _site content
-  FileUtils.rm_rf(Dir.glob("*"))
-  FileUtils.cp_r("#{BUILD_DIR}/.", ".")
+    # Switch in to the tmp dir.
+    Dir.chdir tmp
 
-  # Commit built site
-  sh "git add ."
-  sh %(git commit -m "Deploy site to GitHub Pages" || echo 'Nothing to commit on gh-pages')
+    # Prepare all the content in the repo for deployment.
+    sh "git init" # Init the repo.
+    sh "git checkout #{DEPLOY_BRANCH} 2>/dev/null || git checkout --orphan #{DEPLOY_BRANCH}"
+    sh "git add . && git commit -m 'Site updated at #{Time.now.utc}'" # Add and commit all the files.
+
+    # Add the origin remote for the parent repo to the tmp folder.
+    sh "git remote add origin #{origin}"
+
+    puts "Pushing to #{origin}"
+    sh "git push --force origin #{DEPLOY_BRANCH}"
+  end
+
   sh "git push #{REMOTE} #{DEPLOY_BRANCH}"
 
   # Return to previous branch
